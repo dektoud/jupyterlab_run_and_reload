@@ -7,7 +7,16 @@
   "jupyter.lab.shortcuts": [
     {
       "command": "run-and-reload:run-all-cells-and-reload",
-      "keys": ["Accel Shift D"],
+      "keys": [
+        "Accel Shift D"
+      ],
+      "selector": ".jp-Notebook"
+    },
+    {
+      "command": "run-and-reload:run-selected-and-reload",
+      "keys": [
+        "Accel Shift Enter"
+      ],
       "selector": ".jp-Notebook"
     }
   ],
@@ -19,8 +28,19 @@
           {
             "command": "run-and-reload:run-all-cells-and-reload",
             "rank": 300
+          },
+          {
+            "command": "run-and-reload:run-selected-and-reload",
+            "rank": 301
           }
         ]
+      }
+    ],
+    "context": [
+      {
+        "command": "run-and-reload:run-selected-and-reload",
+        "selector": ".jp-CodeCell",
+        "rank": 10000
       }
     ]
   }

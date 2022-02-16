@@ -20,6 +20,7 @@ import { Widget } from '@lumino/widgets';
 
 namespace CommandIDs {
   export const reloadAll = 'run-and-reload:run-all-cells-and-reload';
+  export const reloadSelected = 'run-and-reload:run-selected-and-reload';
 }
 
 // TODO: Change category to run items
@@ -112,10 +113,66 @@ const plugin: JupyterFrontEndPlugin<void> = {
       }
     });
 
+    commands.addCommand(CommandIDs.reloadSelected, {
+      label: 'Run Selected Cell(s) and Reload PDFs',
+      caption:
+        'Reload all static files after your cell(s) are finished running',
+      isEnabled: () => shell.currentWidget instanceof NotebookPanel,
+      execute: async () => {
+        // Get currently selected widget
+        const currentWidget = shell.currentWidget;
+
+        // If current widget is a notebook then we can run all cells
+        // If not, then this command does not make sense and should not be callable actually
+        if (!(currentWidget instanceof NotebookPanel)) {
+          return;
+        }
+
+        function widgetShouldReload(widget: Widget) {
+          const context = manager.contextForWidget(widget);
+          return context?.path.endsWith('.pdf');
+        }
+
+        // Get all attached widgets in the shell
+        const currentWidgets = toArray(shell.widgets());
+
+        // Obtain the list of widgets that might need to be reloaded after the notebook is finished
+        const widgetsToReload = currentWidgets.filter(widgetShouldReload);
+        const contextsToReload = widgetsToReload.map(widget =>
+          manager.contextForWidget(widget)
+        );
+
+        // Connect the openOrReveal function to the fileChanged signal of the relevant widgets
+        contextsToReload.forEach(context => {
+          context?.fileChanged.connect((context, model) => {
+            manager.openOrReveal(context.path);
+          });
+        });
+
+        // If current widget is a notebook then we can run all cells
+        if (currentWidget instanceof NotebookPanel) {
+          await NotebookActions.runAndAdvance(
+            currentWidget.content,
+            currentWidget.sessionContext
+          );
+        }
+
+        // Loop over all widgets in the shell and revert the relevant ones
+        for (const context of contextsToReload) {
+          context?.revert();
+        }
+      }
+    });
+
     // Add the command to the palette
     if (palette) {
       palette.addItem({
         command: CommandIDs.reloadAll,
+        args: { isPalette: true },
+        category: PALETTE_CATEGORY
+      });
+      palette.addItem({
+        command: CommandIDs.reloadSelected,
         args: { isPalette: true },
         category: PALETTE_CATEGORY
       });
